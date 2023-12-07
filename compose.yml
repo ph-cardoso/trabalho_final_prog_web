@@ -1,0 +1,47 @@
+version: '3'
+
+networks:
+  todo_app_network:
+    driver: bridge
+
+volumes:
+  mysql_todo_db_data:
+    driver: local
+
+services:
+  mysql:
+    container_name: mysql_todo_db
+    image: mysql:8
+    platform: linux/amd64
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-prog_web_root}
+      MYSQL_DATABASE: ${DB_NAME:-todo_db}
+      MYSQL_USER: ${DB_USER:-prog_web_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-prog_web_token}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - mysql_todo_db_data:/var/lib/mysql
+    networks:
+      - todo_app_network
+
+  fastapi_app:
+    container_name: fastapi_app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    platform: linux/amd64
+    restart: always
+    environment:
+      - DB_USER=${DB_USER:-prog_web_user}
+      - DB_PASSWORD=${DB_PASSWORD:-prog_web_token}
+      - DB_HOST=mysql
+      - DB_PORT=${DB_PORT:-3306}
+      - DB_NAME=${DB_NAME:-todo_db}
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    depends_on:
+      - mysql
+    networks:
+      - todo_app_network
